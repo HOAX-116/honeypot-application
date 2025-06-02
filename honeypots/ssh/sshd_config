@@ -1,0 +1,37 @@
+# SSH Honeypot Configuration
+Port 22
+Protocol 2
+
+# Logging
+SyslogFacility AUTH
+LogLevel INFO
+
+# Authentication
+PermitRootLogin yes
+PasswordAuthentication yes
+PubkeyAuthentication yes
+ChallengeResponseAuthentication no
+UsePAM yes
+
+# Security settings (intentionally weak for honeypot)
+PermitEmptyPasswords no
+MaxAuthTries 6
+MaxSessions 10
+MaxStartups 10:30:100
+
+# Disable real shell access
+ForceCommand /bin/false
+
+# Network settings
+TCPKeepAlive yes
+ClientAliveInterval 60
+ClientAliveCountMax 3
+
+# Disable unnecessary features
+X11Forwarding no
+AllowTcpForwarding no
+GatewayPorts no
+PermitTunnel no
+
+# Banner
+Banner /etc/ssh/banner
