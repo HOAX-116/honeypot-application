@@ -1,0 +1,86 @@
+# AWS Configuration
+aws_region = "us-east-1"
+
+# Project Configuration
+project_name = "honeypot-system"
+environment  = "production"
+
+# EC2 Configuration
+instance_type = "t3.medium"
+key_name      = "your-ec2-key-pair"
+
+# Network Configuration
+vpc_cidr    = "10.0.0.0/16"
+subnet_cidr = "10.0.1.0/24"
+
+# Security Configuration
+allowed_ssh_cidr = "0.0.0.0/0"  # Restrict this to your IP range for production
+
+# MaxMind GeoIP Configuration (required for GeoIP enrichment)
+maxmind_account_id  = "your-maxmind-account-id"
+maxmind_license_key = "your-maxmind-license-key"
+
+# Email Alert Configuration
+smtp_host = "smtp.gmail.com"
+smtp_port = 587
+smtp_user = "your-email@gmail.com"
+smtp_pass = "your-app-password"
+
+# Notification Webhooks (optional)
+discord_webhook_url = "https://discord.com/api/webhooks/your-webhook-url"
+slack_webhook_url   = "https://hooks.slack.com/services/your-webhook-url"
+
+# Backup Configuration
+backup_retention_days = 30
+
+# Logging Configuration
+log_retention_days = 14
+
+# Monitoring Configuration
+monitoring = {
+  enabled                    = true
+  health_check_interval     = 300
+  alert_threshold_cpu       = 80
+  alert_threshold_memory    = 85
+  alert_threshold_disk      = 90
+}
+
+# Honeypot Configuration
+honeypot_config = {
+  ssh_port    = 2222
+  http_port   = 8080
+  ftp_port    = 2121
+  telnet_port = 2323
+  
+  # Rate limiting
+  max_connections_per_ip = 10
+  connection_timeout     = 30
+  
+  # Logging
+  log_level = "INFO"
+  
+  # Geolocation
+  enable_geoip = true
+}
+
+# Resource Limits
+resource_limits = {
+  cpu_limit    = "1000m"
+  memory_limit = "1Gi"
+  disk_limit   = "10Gi"
+}
+
+# Alert Thresholds
+alert_thresholds = {
+  failed_login_attempts = 5
+  suspicious_activity   = 10
+  high_traffic_volume   = 100
+}
+
+# Tags
+tags = {
+  Project     = "Honeypot System"
+  Environment = "Production"
+  Owner       = "Security Team"
+  Purpose     = "Threat Detection"
+}
