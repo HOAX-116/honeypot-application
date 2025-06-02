@@ -1,0 +1,293 @@
+version: '3.8'
+
+networks:
+  honeypot_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  elasticsearch_data:
+    driver: local
+  geoip_data:
+    driver: local
+  honeypot_logs:
+    driver: local
+
+services:
+  # Elasticsearch - Data Storage
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: elasticsearch
+    environment:
+      - node.name=elasticsearch
+      - cluster.name=honeypot-cluster
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    networks:
+      - honeypot_net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Logstash - Log Processing
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    container_name: logstash
+    environment:
+      - "LS_JAVA_OPTS=-Xms128m -Xmx128m"
+      - MAXMIND_ACCOUNT_ID=${MAXMIND_ACCOUNT_ID}
+      - MAXMIND_LICENSE_KEY=${MAXMIND_LICENSE_KEY}
+    volumes:
+      - ./config/logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./config/logstash/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+      - geoip_data:/usr/share/logstash/geoip
+      - honeypot_logs:/var/log/honeypot
+    ports:
+      - "5044:5044"
+      - "9600:9600"
+    networks:
+      - honeypot_net
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  # Kibana - Visualization
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - SERVER_NAME=kibana
+      - SERVER_HOST=0.0.0.0
+    volumes:
+      - ./config/kibana/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
+    ports:
+      - "5601:5601"
+    networks:
+      - honeypot_net
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  # SSH Honeypot
+  ssh-honeypot:
+    build: ./honeypots/ssh
+    container_name: ssh-honeypot
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOGSTASH_HOST=logstash
+      - LOGSTASH_PORT=5044
+    volumes:
+      - honeypot_logs:/var/log/honeypot
+    ports:
+      - "2222:22"
+    networks:
+      - honeypot_net
+    depends_on:
+      - logstash
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+        reservations:
+          memory: 32M
+    restart: unless-stopped
+
+  # HTTP Honeypot
+  http-honeypot:
+    build: ./honeypots/http
+    container_name: http-honeypot
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOGSTASH_HOST=logstash
+      - LOGSTASH_PORT=5044
+    volumes:
+      - honeypot_logs:/var/log/honeypot
+    ports:
+      - "8080:80"
+    networks:
+      - honeypot_net
+    depends_on:
+      - logstash
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+        reservations:
+          memory: 32M
+    restart: unless-stopped
+
+  # FTP Honeypot
+  ftp-honeypot:
+    build: ./honeypots/ftp
+    container_name: ftp-honeypot
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOGSTASH_HOST=logstash
+      - LOGSTASH_PORT=5044
+    volumes:
+      - honeypot_logs:/var/log/honeypot
+    ports:
+      - "2121:21"
+      - "21000-21010:21000-21010"  # Passive mode ports
+    networks:
+      - honeypot_net
+    depends_on:
+      - logstash
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+        reservations:
+          memory: 32M
+    restart: unless-stopped
+
+  # Telnet Honeypot
+  telnet-honeypot:
+    build: ./honeypots/telnet
+    container_name: telnet-honeypot
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOGSTASH_HOST=logstash
+      - LOGSTASH_PORT=5044
+    volumes:
+      - honeypot_logs:/var/log/honeypot
+    ports:
+      - "2323:23"
+    networks:
+      - honeypot_net
+    depends_on:
+      - logstash
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+        reservations:
+          memory: 32M
+    restart: unless-stopped
+
+  # GeoIP Enrichment Service
+  geoip-enricher:
+    build: ./services/geoip
+    container_name: geoip-enricher
+    environment:
+      - MAXMIND_ACCOUNT_ID=${MAXMIND_ACCOUNT_ID}
+      - MAXMIND_LICENSE_KEY=${MAXMIND_LICENSE_KEY}
+      - ELASTICSEARCH_HOST=http://elasticsearch:9200
+    volumes:
+      - geoip_data:/app/geoip
+    networks:
+      - honeypot_net
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+    restart: unless-stopped
+
+  # Alert Manager
+  alert-manager:
+    build: ./services/alerts
+    container_name: alert-manager
+    environment:
+      - ELASTICSEARCH_HOST=http://elasticsearch:9200
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    networks:
+      - honeypot_net
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+    restart: unless-stopped
+
+  # API Gateway
+  api-gateway:
+    build: ./services/api
+    container_name: api-gateway
+    environment:
+      - ELASTICSEARCH_HOST=http://elasticsearch:9200
+    ports:
+      - "8000:8000"
+    networks:
+      - honeypot_net
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+    restart: unless-stopped
+
+  # Health Monitor
+  health-monitor:
+    build: ./services/health
+    container_name: health-monitor
+    environment:
+      - ELASTICSEARCH_HOST=http://elasticsearch:9200
+      - KIBANA_HOST=http://kibana:5601
+      - CHECK_INTERVAL=30
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - honeypot_net
+    depends_on:
+      - elasticsearch
+      - kibana
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+        reservations:
+          memory: 32M
+    restart: unless-stopped
