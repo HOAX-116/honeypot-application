@@ -3,8 +3,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![AWS Free Tier](https://img.shields.io/badge/AWS-Free%20Tier%20Compatible-orange.svg)](https://aws.amazon.com/free/)
 [![Docker](https://img.shields.io/badge/Docker-Compose%20Ready-blue.svg)](https://docs.docker.com/compose/)
+[![Terraform](https://img.shields.io/badge/Terraform-Infrastructure%20as%20Code-purple.svg)](https://terraform.io/)
 
-A comprehensive, production-ready honeypot system designed for cybersecurity research and learning. Deploy multiple service honeypots, capture attacker behavior, perform geolocation analysis, and visualize threats in real-time.
+A comprehensive, production-ready honeypot system designed for cybersecurity research and threat detection. Deploy multiple service honeypots with complete infrastructure automation, capture attacker behavior, perform geolocation analysis, and visualize threats in real-time using the ELK stack.
 
 ## 🏗️ Architecture Overview
 
@@ -36,106 +37,190 @@ A comprehensive, production-ready honeypot system designed for cybersecurity res
 
 ### Prerequisites
 
-- Docker & Docker Compose
-- AWS Account (Free Tier)
-- MaxMind GeoIP Account (Free)
-- Git
+- **Docker & Docker Compose** (v20.10+ recommended)
+- **Git** for cloning the repository
+- **Terraform** (v1.0+) for infrastructure deployment
+- **AWS Account** (Free Tier compatible)
+- **MaxMind GeoIP Account** (Free registration required)
 
-### 1-Click Local Deployment
+### 🏠 Local Development Deployment
+
+Perfect for testing, development, and learning cybersecurity concepts.
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/honeypot-system.git
-cd honeypot-system
+# 1. Clone the repository
+git clone https://github.com/HOAX-116/honeypot-application.git
+cd honeypot-application
 
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your MaxMind credentials
+# 2. Configure environment variables
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your credentials (see Configuration section)
 
-# Deploy the entire system
+# 3. Start all services locally
 docker-compose up -d
 
-# Access Kibana Dashboard
-open http://localhost:5601
+# 4. Verify deployment
+./scripts/monitor.sh
+
+# 5. Access services
+echo "🔍 Kibana Dashboard: http://localhost:5601"
+echo "🕷️ SSH Honeypot: localhost:2222"
+echo "🌐 HTTP Honeypot: http://localhost:8080"
+echo "📁 FTP Honeypot: localhost:2121"
+echo "📟 Telnet Honeypot: localhost:2323"
+echo "🔧 API Gateway: http://localhost:8000"
 ```
 
-### AWS Free Tier Deployment
+### ☁️ AWS Production Deployment
+
+Complete infrastructure automation with Terraform for production environments.
 
 ```bash
-# Launch EC2 instance (t2.micro)
-./scripts/aws-deploy.sh
+# 1. Configure AWS credentials
+aws configure
+# Or export AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
 
-# Or use Terraform
-cd terraform/
+# 2. Configure deployment variables
+cp terraform.tfvars.example terraform.tfvars
+# Edit with your specific configuration
+
+# 3. Deploy infrastructure
 terraform init
 terraform plan
 terraform apply
+
+# 4. Get deployment information
+terraform output
+
+# 5. Access your honeypot system
+# Kibana: http://<instance-ip>:5601
+# SSH Honeypot: <instance-ip>:2222
+```
+
+### 🚀 One-Command Deployment
+
+Use our automated deployment script for quick setup:
+
+```bash
+# Local deployment
+./scripts/deploy.sh --local
+
+# AWS deployment
+./scripts/deploy.sh --aws --region us-east-1
 ```
 
 ## 📋 System Components
 
-### Honeypot Services
+### 🕷️ Honeypot Services
 
-| Service | Port | Purpose | Logging |
-|---------|------|---------|---------|
-| SSH | 2222 | Capture SSH brute force attacks | ✅ |
-| HTTP | 8080 | Web application attacks | ✅ |
-| FTP | 2121 | File transfer protocol attacks | ✅ |
-| Telnet | 2323 | Legacy protocol attacks | ✅ |
+| Service | Port | Technology | Purpose | Features |
+|---------|------|------------|---------|----------|
+| **SSH** | 2222 | Python + Paramiko | SSH brute force attacks | Interactive shell simulation, credential logging |
+| **HTTP** | 8080 | Flask + Python | Web application attacks | Fake login pages, payload capture, file upload traps |
+| **FTP** | 2121 | Python FTP Server | File transfer attacks | Directory traversal, credential harvesting |
+| **Telnet** | 2323 | Socket-based Python | Legacy protocol attacks | Command simulation, session logging |
 
-### ELK Stack Configuration
+### 🛠️ Supporting Services
 
-- **Elasticsearch**: Data storage and indexing
-- **Logstash**: Log processing and enrichment
-- **Kibana**: Visualization and dashboards
+| Service | Purpose | Technology | Features |
+|---------|---------|------------|----------|
+| **GeoIP Enrichment** | IP geolocation analysis | MaxMind + Python | Real-time country/city detection, ISP mapping |
+| **Alert Management** | Threat notifications | Python + SMTP/Webhooks | Email, Discord, Slack alerts with threat intelligence |
+| **API Gateway** | System management | Flask REST API | Honeypot control, statistics, data export |
+| **Health Monitor** | System monitoring | Python + Docker API | Service health, resource monitoring, auto-recovery |
 
-### GeoIP Integration
+### 📊 ELK Stack Configuration
 
-- **MaxMind GeoLite2**: IP geolocation database
-- **Real-time analysis**: Automatic country/city detection
-- **Threat intelligence**: ISP and organization mapping
+- **Elasticsearch 8.11.0**: Distributed search and analytics engine
+- **Logstash 8.11.0**: Data processing pipeline with custom honeypot parsing
+- **Kibana 8.11.0**: Data visualization and dashboard platform
+
+### 🌍 GeoIP Integration
+
+- **MaxMind GeoLite2**: Free IP geolocation database
+- **Real-time enrichment**: Automatic geographic data enhancement
+- **Threat intelligence**: ISP, organization, and ASN mapping
+- **Custom analytics**: Attack pattern analysis by geography
 
 ## 🔧 Configuration
 
-### Environment Variables
+### 📝 Configuration Files
 
-Create a `.env` file with the following variables:
+The system uses `terraform.tfvars` for configuration. Copy the example and customize:
 
 ```bash
-# MaxMind GeoIP Configuration
-MAXMIND_ACCOUNT_ID=1177216
-MAXMIND_LICENSE_KEY=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
+cp terraform.tfvars.example terraform.tfvars
+```
 
-# Elasticsearch Configuration
-ELASTIC_PASSWORD=your_secure_password
-ELASTIC_USERNAME=elastic
+### 🔑 Required Configuration
 
-# Alert Configuration
+Edit `terraform.tfvars` with your specific settings:
+
+```hcl
+# AWS Configuration
+aws_region = "us-east-1"
+project_name = "honeypot-system"
+environment = "production"
+
+# EC2 Configuration
+instance_type = "t3.medium"  # or t2.micro for free tier
+key_name = "your-ec2-key-pair"
+
+# Network Configuration
+vpc_cidr = "10.0.0.0/16"
+subnet_cidr = "10.0.1.0/24"
+allowed_ssh_cidr = "YOUR_IP/32"  # Restrict to your IP for security
+
+# MaxMind GeoIP Configuration (Free account required)
+maxmind_account_id = "your-maxmind-account-id"
+maxmind_license_key = "your-maxmind-license-key"
+
+# Email Alert Configuration
+smtp_host = "smtp.gmail.com"
+smtp_port = 587
+smtp_user = "your-email@gmail.com"
+smtp_pass = "your-app-password"
+
+# Optional Webhook Notifications
+discord_webhook_url = "https://discord.com/api/webhooks/your-webhook"
+slack_webhook_url = "https://hooks.slack.com/services/your-webhook"
+```
+
+### 🌍 MaxMind GeoIP Setup
+
+1. **Create Free Account**: Visit [MaxMind](https://www.maxmind.com/en/geolite2/signup)
+2. **Generate License Key**: Go to Account → Manage License Keys
+3. **Add to Configuration**: Update `terraform.tfvars` with your credentials
+4. **Automatic Download**: System downloads GeoLite2 databases automatically
+
+### 🐳 Local Development Configuration
+
+For local development, the system uses environment variables from docker-compose:
+
+```yaml
+# docker-compose.yml environment section
+environment:
+  - MAXMIND_ACCOUNT_ID=${MAXMIND_ACCOUNT_ID}
+  - MAXMIND_LICENSE_KEY=${MAXMIND_LICENSE_KEY}
+  - SMTP_HOST=${SMTP_HOST}
+  - SMTP_USER=${SMTP_USER}
+  - SMTP_PASS=${SMTP_PASS}
+  - LOG_LEVEL=INFO
+```
+
+Create a `.env` file for local development:
+
+```bash
+# .env file for local development
+MAXMIND_ACCOUNT_ID=your_account_id
+MAXMIND_LICENSE_KEY=your_license_key
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your_email@gmail.com
 SMTP_PASS=your_app_password
-
-# Discord Webhook (Optional)
 DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/your_webhook
-
-# Slack Webhook (Optional)
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/your_webhook
-
-# System Configuration
-LOG_LEVEL=INFO
-HONEYPOT_NETWORK=honeypot_net
 ```
-
-### MaxMind API Setup
-
-1. **Account Setup**: Your credentials are already provided
-   - Account ID: `1177216`
-   - License Key: `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`
-
-2. **Database Download**: The system automatically downloads GeoLite2 databases
-
-3. **API Integration**: Configured in `config/geoip-config.yml`
 
 ## 🐳 Docker Services
 
@@ -285,28 +370,161 @@ deploy:
 
 ## 🚀 Deployment Instructions
 
-### Local Development
+### 🏠 Local Development Deployment
+
+Perfect for learning, testing, and development environments.
+
+#### Step 1: Prerequisites Installation
 
 ```bash
-# 1. Clone and setup
-git clone https://github.com/your-username/honeypot-system.git
-cd honeypot-system
+# Install Docker (Ubuntu/Debian)
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo usermod -aG docker $USER
 
-# 2. Configure environment
-cp .env.example .env
-# Edit .env with your credentials
+# Install Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
 
-# 3. Build and deploy
+# Verify installation
+docker --version
+docker-compose --version
+```
+
+#### Step 2: Clone and Setup
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/HOAX-116/honeypot-application.git
+cd honeypot-application
+
+# 2. Create environment file
+cp terraform.tfvars.example .env
+
+# 3. Edit environment variables (minimal setup for local)
+cat > .env << EOF
+MAXMIND_ACCOUNT_ID=your_account_id
+MAXMIND_LICENSE_KEY=your_license_key
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_app_password
+LOG_LEVEL=INFO
+EOF
+```
+
+#### Step 3: System Configuration
+
+```bash
+# Increase virtual memory for Elasticsearch
+sudo sysctl -w vm.max_map_count=262144
+echo 'vm.max_map_count=262144' | sudo tee -a /etc/sysctl.conf
+
+# Create necessary directories
+mkdir -p logs data/elasticsearch data/geoip
+
+# Set permissions
+sudo chown -R 1000:1000 data/
+```
+
+#### Step 4: Deploy Services
+
+```bash
+# Build all services
 docker-compose build
+
+# Start all services in background
 docker-compose up -d
 
-# 4. Verify deployment
-./scripts/health-check.sh
+# Monitor startup logs
+docker-compose logs -f
 
-# 5. Access services
-echo "Kibana: http://localhost:5601"
-echo "SSH Honeypot: localhost:2222"
-echo "HTTP Honeypot: http://localhost:8080"
+# Wait for services to be ready (takes 2-3 minutes)
+./scripts/monitor.sh
+```
+
+#### Step 5: Verify Deployment
+
+```bash
+# Check service status
+docker-compose ps
+
+# Test honeypot services
+echo "Testing SSH honeypot..."
+ssh -p 2222 admin@localhost
+
+echo "Testing HTTP honeypot..."
+curl http://localhost:8080
+
+echo "Testing FTP honeypot..."
+ftp localhost 2121
+
+echo "Testing API gateway..."
+curl http://localhost:8000/api/v1/health
+```
+
+#### Step 6: Access Dashboards
+
+```bash
+# Service URLs
+echo "🔍 Kibana Dashboard: http://localhost:5601"
+echo "🔧 API Gateway: http://localhost:8000"
+echo "📊 Health Monitor: http://localhost:8000/api/v1/health"
+
+# Honeypot endpoints
+echo "🕷️ SSH Honeypot: localhost:2222"
+echo "🌐 HTTP Honeypot: http://localhost:8080"
+echo "📁 FTP Honeypot: localhost:2121"
+echo "📟 Telnet Honeypot: localhost:2323"
+```
+
+### 🔧 Local Development Tips
+
+#### Resource Management
+
+```bash
+# Monitor resource usage
+docker stats
+
+# Reduce resource usage for low-memory systems
+export ES_JAVA_OPTS="-Xms256m -Xmx256m"
+export LS_JAVA_OPTS="-Xms128m -Xmx128m"
+
+# Restart with reduced memory
+docker-compose down
+docker-compose up -d
+```
+
+#### Development Workflow
+
+```bash
+# View real-time logs
+docker-compose logs -f ssh-honeypot
+docker-compose logs -f http-honeypot
+
+# Restart specific service
+docker-compose restart ssh-honeypot
+
+# Rebuild and restart service
+docker-compose up -d --build ssh-honeypot
+
+# Access service shell for debugging
+docker-compose exec ssh-honeypot /bin/bash
+```
+
+#### Data Management
+
+```bash
+# Backup honeypot data
+./scripts/backup.sh --local
+
+# Clear all data (reset system)
+docker-compose down -v
+sudo rm -rf data/elasticsearch/*
+docker-compose up -d
+
+# Export attack data
+curl "http://localhost:8000/api/v1/export?format=json&days=7" > attacks.json
 ```
 
 ### AWS Production Deployment
@@ -395,44 +613,227 @@ python scripts/add_alert_rule.py \
 
 ## 🔧 Troubleshooting
 
-### Common Issues
+### 🏠 Local Deployment Issues
 
-**Issue**: Elasticsearch won't start
+#### Elasticsearch Issues
+
+**Issue**: Elasticsearch won't start or crashes
 ```bash
-# Solution: Increase virtual memory
+# Solution 1: Increase virtual memory
 sudo sysctl -w vm.max_map_count=262144
 echo 'vm.max_map_count=262144' | sudo tee -a /etc/sysctl.conf
+
+# Solution 2: Check disk space
+df -h
+# Ensure at least 2GB free space
+
+# Solution 3: Reduce memory usage
+export ES_JAVA_OPTS="-Xms256m -Xmx256m"
+docker-compose down && docker-compose up -d elasticsearch
 ```
 
-**Issue**: High memory usage
+**Issue**: Elasticsearch "yellow" cluster health
 ```bash
-# Solution: Reduce heap sizes
-export ES_JAVA_OPTS="-Xms128m -Xmx128m"
-export LS_JAVA_OPTS="-Xms64m -Xmx64m"
+# This is normal for single-node development
+# Check status
+curl http://localhost:9200/_cluster/health?pretty
+
+# Force green status (development only)
+curl -X PUT "localhost:9200/_settings" -H 'Content-Type: application/json' -d'
+{
+  "index": {
+    "number_of_replicas": 0
+  }
+}'
 ```
 
-**Issue**: MaxMind API errors
+#### Docker Issues
+
+**Issue**: Permission denied errors
 ```bash
-# Solution: Verify credentials
-curl -u "1177216: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" \
-  "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=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&suffix=tar.gz"
+# Solution: Fix Docker permissions
+sudo usermod -aG docker $USER
+newgrp docker
+
+# Fix data directory permissions
+sudo chown -R 1000:1000 data/
+sudo chmod -R 755 data/
 ```
 
-### Health Checks
-
+**Issue**: Port conflicts
 ```bash
-# System health
-./scripts/health-check.sh
+# Check what's using ports
+sudo netstat -tulpn | grep :5601
+sudo netstat -tulpn | grep :9200
 
-# Service status
-docker-compose ps
+# Kill conflicting processes
+sudo fuser -k 5601/tcp
+sudo fuser -k 9200/tcp
 
-# Resource usage
+# Or change ports in docker-compose.yml
+```
+
+#### Memory Issues
+
+**Issue**: System running out of memory
+```bash
+# Check memory usage
+free -h
 docker stats
 
-# Log analysis
-./scripts/analyze-logs.sh --service=all --last=1h
+# Reduce resource allocation
+cat > docker-compose.override.yml << EOF
+version: '3.8'
+services:
+  elasticsearch:
+    environment:
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+  logstash:
+    environment:
+      - "LS_JAVA_OPTS=-Xms128m -Xmx128m"
+EOF
+
+# Restart services
+docker-compose down && docker-compose up -d
 ```
+
+#### Service Connection Issues
+
+**Issue**: Services can't connect to Elasticsearch
+```bash
+# Check Elasticsearch is running
+curl http://localhost:9200/_cluster/health
+
+# Check Docker network
+docker network ls
+docker network inspect honeypot-application_default
+
+# Restart dependent services
+docker-compose restart logstash kibana geoip-service
+```
+
+#### MaxMind GeoIP Issues
+
+**Issue**: GeoIP service fails to download databases
+```bash
+# Verify credentials
+curl -u "YOUR_ACCOUNT_ID:YOUR_LICENSE_KEY" \
+  "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=YOUR_LICENSE_KEY&suffix=tar.gz"
+
+# Check service logs
+docker-compose logs geoip-service
+
+# Manual database download
+mkdir -p data/geoip
+cd data/geoip
+wget "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=YOUR_LICENSE_KEY&suffix=tar.gz" -O GeoLite2-City.tar.gz
+```
+
+### 🔍 Health Checks and Monitoring
+
+#### System Health Commands
+
+```bash
+# Overall system health
+./scripts/monitor.sh
+
+# Individual service health
+docker-compose ps
+docker-compose logs --tail=50 SERVICE_NAME
+
+# Resource monitoring
+docker stats --no-stream
+df -h
+free -h
+
+# Network connectivity
+docker-compose exec ssh-honeypot ping elasticsearch
+docker-compose exec api-gateway curl http://elasticsearch:9200/_cluster/health
+```
+
+#### Service-Specific Checks
+
+```bash
+# Elasticsearch health
+curl "http://localhost:9200/_cluster/health?pretty"
+curl "http://localhost:9200/_cat/indices?v"
+
+# Kibana health
+curl "http://localhost:5601/api/status"
+
+# Logstash health
+curl "http://localhost:9600/_node/stats?pretty"
+
+# API Gateway health
+curl "http://localhost:8000/api/v1/health"
+
+# Test honeypot services
+ssh -p 2222 test@localhost  # Should connect and log attempt
+curl http://localhost:8080  # Should return honeypot page
+```
+
+#### Log Analysis
+
+```bash
+# View all service logs
+docker-compose logs
+
+# Follow specific service logs
+docker-compose logs -f elasticsearch
+docker-compose logs -f ssh-honeypot
+
+# Search for errors
+docker-compose logs | grep -i error
+docker-compose logs | grep -i exception
+
+# Export logs for analysis
+docker-compose logs > system_logs.txt
+```
+
+### 🚨 Emergency Recovery
+
+#### Complete System Reset
+
+```bash
+# Stop all services
+docker-compose down
+
+# Remove all data (WARNING: This deletes all honeypot data)
+sudo rm -rf data/
+docker volume prune -f
+
+# Recreate directories
+mkdir -p logs data/elasticsearch data/geoip
+sudo chown -R 1000:1000 data/
+
+# Restart system
+docker-compose up -d
+```
+
+#### Partial Recovery
+
+```bash
+# Reset only Elasticsearch data
+docker-compose stop elasticsearch kibana logstash
+sudo rm -rf data/elasticsearch/*
+docker-compose start elasticsearch
+
+# Wait for Elasticsearch to be ready
+sleep 30
+
+# Restart dependent services
+docker-compose start kibana logstash
+```
+
+### 📞 Getting Help
+
+If you encounter issues not covered here:
+
+1. **Check logs**: `docker-compose logs SERVICE_NAME`
+2. **Verify configuration**: Ensure `.env` file has correct values
+3. **Check resources**: Ensure sufficient memory and disk space
+4. **Review documentation**: See `DEPLOYMENT.md` for detailed instructions
+5. **Create issue**: [GitHub Issues](https://github.com/HOAX-116/honeypot-application/issues)
 
 ## 📚 API Documentation
 
